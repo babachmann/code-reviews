@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { gqlFetch, getGraphqlUrl } from "@/lib/graphql";
+import { savedViewHref, type SavedView } from "@/lib/dashboard";
 
 // Always render on request so the page reflects the current DB contents.
 export const dynamic = "force-dynamic";
@@ -29,6 +30,7 @@ type HomeData = {
     lastIngestedAt: string | null;
   };
   indicators: Indicator[];
+  savedViews: SavedView[];
 };
 
 const HOME_QUERY = /* GraphQL */ `
@@ -55,6 +57,16 @@ const HOME_QUERY = /* GraphQL */ `
         min
         max
       }
+    }
+    savedViews(limit: 5) {
+      id
+      name
+      indicator
+      year
+      countries
+      order
+      region
+      createdAt
     }
   }
 `;
@@ -171,6 +183,37 @@ export default async function Home() {
                 </Link>
               </p>
             </>
+          )}
+        </section>
+      )}
+
+      {result.ok && (
+        <section className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <h2 className="mb-4 text-lg font-medium">Saved views</h2>
+          {result.data.savedViews.length === 0 ? (
+            <p className="text-zinc-500">
+              No saved views yet. Save one from the{" "}
+              <Link href="/dashboard" className="underline underline-offset-4">
+                dashboard
+              </Link>
+              .
+            </p>
+          ) : (
+            <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              {result.data.savedViews.map((v) => (
+                <li key={v.id} className="flex items-baseline justify-between gap-4 py-2">
+                  <Link href={savedViewHref(v)} className="font-medium underline underline-offset-4">
+                    {v.name}
+                  </Link>
+                  <time
+                    dateTime={v.createdAt}
+                    className="shrink-0 font-mono text-xs text-zinc-500"
+                  >
+                    {new Date(v.createdAt).toLocaleString("en-GB")}
+                  </time>
+                </li>
+              ))}
+            </ul>
           )}
         </section>
       )}
