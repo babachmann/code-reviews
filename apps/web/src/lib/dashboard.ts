@@ -256,6 +256,14 @@ const SAVED_VIEWS_QUERY = /* GraphQL */ `
   }
 `;
 
+const SAVED_VIEW_QUERY = /* GraphQL */ `
+  query SavedView($id: Int!) {
+    savedView(id: $id) {
+      ${SAVED_VIEW_FIELDS}
+    }
+  }
+`;
+
 const CREATE_SAVED_VIEW_MUTATION = /* GraphQL */ `
   mutation CreateSavedView($input: SavedViewInput!) {
     createSavedView(input: $input) {
@@ -273,6 +281,22 @@ const DELETE_SAVED_VIEW_MUTATION = /* GraphQL */ `
 export async function fetchSavedViews(limit?: number): Promise<SavedView[]> {
   const data = await gqlFetch<{ savedViews: SavedView[] }>(SAVED_VIEWS_QUERY, { limit });
   return data.savedViews;
+}
+
+export async function fetchSavedView(id: number): Promise<SavedView | null> {
+  const data = await gqlFetch<{ savedView: SavedView | null }>(SAVED_VIEW_QUERY, { id });
+  return data.savedView;
+}
+
+/** True when the dashboard settings are exactly the ones stored in the view. */
+export function matchesSavedView(params: DashboardParams, view: SavedView): boolean {
+  return (
+    params.indicator === view.indicator &&
+    params.year === view.year &&
+    params.countries.join(",") === view.countries.join(",") &&
+    params.order === view.order &&
+    params.region === view.region
+  );
 }
 
 export async function createSavedView(input: { name: string } & DashboardParams): Promise<SavedView> {

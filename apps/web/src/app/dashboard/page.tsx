@@ -1,10 +1,13 @@
+import Link from "next/link";
 import { Suspense } from "react";
 import {
   GDP_PER_CAPITA,
   LIFE_EXPECTANCY,
   fetchDashboardData,
   fetchDashboardMeta,
+  fetchSavedView,
   fetchSavedViews,
+  matchesSavedView,
   parseParams,
   toScatterPoints,
   type RawSearchParams,
@@ -28,17 +31,45 @@ export const metadata = { title: "Dashboard · Code Reviews" };
 type PageProps = { searchParams: Promise<RawSearchParams> };
 
 export default async function DashboardPage({ searchParams }: PageProps) {
-  const params = parseParams(await searchParams);
+  const sp = await searchParams;
+  const params = parseParams(sp);
+  // `view=<id>` is set when the dashboard was opened from a saved view.
+  const viewRequested = typeof sp.view === "string" && sp.view !== "";
+  const viewId = Number(sp.view);
 
-  let meta, savedViews;
+  let meta, savedViews, openView;
   try {
-    [meta, savedViews] = await Promise.all([fetchDashboardMeta(), fetchSavedViews()]);
+    [meta, savedViews, openView] = await Promise.all([
+      fetchDashboardMeta(),
+      fetchSavedViews(),
+      viewRequested && Number.isInteger(viewId) ? fetchSavedView(viewId) : null,
+    ]);
   } catch (err) {
     return (
       <main className="mx-auto w-full max-w-6xl px-6 py-16">
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
           <p className="font-medium">Could not reach the GraphQL API at {getGraphqlUrl()}.</p>
           <p className="mt-1 font-mono text-xs">{err instanceof Error ? err.message : String(err)}</p>
+        </div>
+      </main>
+    );
+  }
+
+  // A saved view that was deleted, or whose indicator is no longer in the database, can't be shown.
+  if (viewRequested && (!openView || !meta.indicators.some((i) => i.code === openView.indicator))) {
+    return (
+      <main className="mx-auto w-full max-w-6xl px-6 py-16">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
+          <p className="font-medium">
+            {openView
+              ? `The saved view "${openView.name}" can't be shown because its indicator (${openView.indicator}) is no longer in the database.`
+              : "This saved view no longer exists."}
+          </p>
+          <p className="mt-2">
+            <Link href="/dashboard" className="font-medium underline underline-offset-4">
+              Go to the dashboard
+            </Link>
+          </p>
         </div>
       </main>
     );
@@ -76,6 +107,9 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       <header className="flex flex-col gap-1">
         <p className="text-sm font-medium uppercase tracking-wide text-zinc-500">Code Reviews</p>
         <h1 className="text-3xl font-semibold tracking-tight">World Bank dashboard</h1>
+        {openView && matchesSavedView(params, openView) && (
+          <p className="text-sm font-medium">Viewing: {openView.name}</p>
+        )}
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
           {summary.countries} countries · data up to {summary.latestYear}
         </p>
