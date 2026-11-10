@@ -64,3 +64,21 @@ model Observation {
   @@unique([countryCode, indicatorCode, year])
   @@index([indicatorCode, year])
 }
+
+/// A named dashboard configuration that anyone can save and reopen.
+model SavedView {
+  id        Int      @id @default(autoincrement())
+  /// Display name, trimmed, at most 60 characters, unique (case-sensitive)
+  name      String   @unique
+  /// World Bank indicator code, e.g. "NY.GDP.PCAP.CD"
+  indicator String
+  /// Year shown; null means "use the indicator's latest year"
+  year      Int?
+  /// Comma-separated ISO3 country codes for the line chart, e.g. "GBR,USA"
+  countries String
+  /// Ranking order, "ASC" or "DESC"
+  order     String
+  /// Highlighted World Bank region name; null for none
+  region    String?
+  createdAt DateTime @default(now())
+}
