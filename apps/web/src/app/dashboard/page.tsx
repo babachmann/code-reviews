@@ -4,6 +4,7 @@ import {
   LIFE_EXPECTANCY,
   fetchDashboardData,
   fetchDashboardMeta,
+  fetchSavedViews,
   parseParams,
   toScatterPoints,
   type RawSearchParams,
@@ -18,6 +19,7 @@ import { RegionBarChart } from "@/components/charts/RegionBarChart";
 import { GdpLifeScatter } from "@/components/charts/GdpLifeScatter";
 import { RankingTable } from "@/components/dashboard/RankingTable";
 import { Controls } from "@/components/dashboard/Controls";
+import { SavedViews } from "@/components/dashboard/SavedViews";
 
 export const dynamic = "force-dynamic";
 
@@ -28,9 +30,9 @@ type PageProps = { searchParams: Promise<RawSearchParams> };
 export default async function DashboardPage({ searchParams }: PageProps) {
   const params = parseParams(await searchParams);
 
-  let meta;
+  let meta, savedViews;
   try {
-    meta = await fetchDashboardMeta();
+    [meta, savedViews] = await Promise.all([fetchDashboardMeta(), fetchSavedViews()]);
   } catch (err) {
     return (
       <main className="mx-auto w-full max-w-6xl px-6 py-16">
@@ -110,6 +112,17 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           yearOptions={yearOptions}
         />
       </Suspense>
+
+      <SavedViews
+        views={savedViews}
+        current={{
+          indicator: indicator.code,
+          year: params.year,
+          countries: params.countries,
+          order: params.order,
+          region: params.region,
+        }}
+      />
 
       {/* 2. Indicator over time */}
       <ChartCard

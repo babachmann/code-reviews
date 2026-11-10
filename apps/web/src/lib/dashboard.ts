@@ -223,3 +223,74 @@ export async function fetchDashboardData(params: {
     snapshotIndicators: [GDP_PER_CAPITA, LIFE_EXPECTANCY, POPULATION],
   });
 }
+
+// ---------------------------------------------------------------- saved views
+
+export type SavedView = {
+  id: number;
+  name: string;
+  indicator: string;
+  year: number | null;
+  countries: string[];
+  order: SortOrder;
+  region: string | null;
+  createdAt: string;
+};
+
+const SAVED_VIEW_FIELDS = /* GraphQL */ `
+  id
+  name
+  indicator
+  year
+  countries
+  order
+  region
+  createdAt
+`;
+
+const SAVED_VIEWS_QUERY = /* GraphQL */ `
+  query SavedViews($limit: Int) {
+    savedViews(limit: $limit) {
+      ${SAVED_VIEW_FIELDS}
+    }
+  }
+`;
+
+const CREATE_SAVED_VIEW_MUTATION = /* GraphQL */ `
+  mutation CreateSavedView($input: SavedViewInput!) {
+    createSavedView(input: $input) {
+      ${SAVED_VIEW_FIELDS}
+    }
+  }
+`;
+
+const DELETE_SAVED_VIEW_MUTATION = /* GraphQL */ `
+  mutation DeleteSavedView($id: Int!) {
+    deleteSavedView(id: $id)
+  }
+`;
+
+export async function fetchSavedViews(limit?: number): Promise<SavedView[]> {
+  const data = await gqlFetch<{ savedViews: SavedView[] }>(SAVED_VIEWS_QUERY, { limit });
+  return data.savedViews;
+}
+
+export async function createSavedView(input: { name: string } & DashboardParams): Promise<SavedView> {
+  const data = await gqlFetch<{ createSavedView: SavedView }>(CREATE_SAVED_VIEW_MUTATION, { input });
+  return data.createSavedView;
+}
+
+export async function deleteSavedView(id: number): Promise<boolean> {
+  const data = await gqlFetch<{ deleteSavedView: boolean }>(DELETE_SAVED_VIEW_MUTATION, { id });
+  return data.deleteSavedView;
+}
+
+/** Dashboard URL that opens a saved view. The year and region are left out when the view has none. */
+export function savedViewHref(view: SavedView): string {
+  const sp = new URLSearchParams({ view: String(view.id), indicator: view.indicator });
+  if (view.year != null) sp.set("year", String(view.year));
+  sp.set("countries", view.countries.join(","));
+  sp.set("order", view.order);
+  if (view.region) sp.set("region", view.region);
+  return `/dashboard?${sp.toString()}`;
+}
